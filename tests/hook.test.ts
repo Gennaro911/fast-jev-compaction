@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   compactSession,
@@ -96,6 +97,13 @@ describe('jev access', () => {
 
   it('returns no key when none is configured', async () => {
     expect(await getJevAccess(host({}), config)).toEqual({});
+  });
+
+  it('calls $.env.get only with literal names, as the engine requires', () => {
+    const source = readFileSync(new URL('../hooks/fast-jev.ts', import.meta.url), 'utf8');
+    const calls = [...source.matchAll(/\$\.env\.get\(([^)]*)\)/g)].map((m) => m[1].trim());
+    expect(calls.length).toBeGreaterThan(0);
+    for (const arg of calls) expect(arg).toMatch(/^(['"])[A-Z_][A-Z0-9_]*\1$/);
   });
 });
 
