@@ -1,0 +1,28 @@
+# Keeps this fork current: merges tamaratran/fast-jev-compaction into main every day.
+# A merge conflict fails the run (GitHub emails you) instead of overwriting the OpenRouter fallback.
+name: Sync upstream
+
+on:
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: github.repository != 'tamaratran/fast-jev-compaction'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Merge upstream main
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git remote add upstream https://github.com/tamaratran/fast-jev-compaction.git
+          git fetch upstream main
+          git merge --no-edit upstream/main
+          git push origin HEAD:main
