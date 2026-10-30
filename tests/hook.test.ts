@@ -3,6 +3,9 @@ import {
   compactSession,
   decisionLog,
   decisionLogLines,
+  getJevAccess,
+  OPENROUTER_MODEL,
+  OPENROUTER_URL,
   resolveHookConfig,
   summarize,
   toSessionMessages,
@@ -65,6 +68,34 @@ describe('hook config', () => {
       compactAtPercent: 60,
       minReductionRatio: 0.25,
     });
+  });
+});
+
+describe('jev access', () => {
+  const host = (env: Record<string, string>, settingsEnv: Record<string, string> = {}) => ({
+    env: { get: async (name: string) => env[name] },
+    settings: { read: async () => ({ env: settingsEnv }) },
+  });
+  const config = resolveHookConfig({});
+
+  it('prefers the plugin option, then TYPESAFE_API_KEY', async () => {
+    expect(await getJevAccess(host({ TYPESAFE_API_KEY: 't' }), { ...config, apiKey: 'opt' })).toEqual({ apiKey: 'opt' });
+    expect(await getJevAccess(host({ TYPESAFE_API_KEY: 't', OPENROUTER_API_KEY: 'o' }), config)).toEqual({ apiKey: 't' });
+  });
+
+  it('falls back to OpenRouter with its model slug', async () => {
+    expect(await getJevAccess(host({}, { OPENROUTER_API_KEY: 'o' }), config)).toEqual({
+      apiKey: 'o',
+      baseUrl: OPENROUTER_URL,
+      model: OPENROUTER_MODEL,
+    });
+    expect((await getJevAccess(host({ OPENROUTER_API_KEY: 'o' }), { ...config, model: 'typesafe/jev-x' })).model).toBe(
+      'typesafe/jev-x',
+    );
+  });
+
+  it('returns no key when none is configured', async () => {
+    expect(await getJevAccess(host({}), config)).toEqual({});
   });
 });
 
