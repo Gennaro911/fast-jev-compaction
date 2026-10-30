@@ -254,8 +254,10 @@ export async function getJevAccess(
   if (config.apiKey) return { apiKey: config.apiKey };
   const settings = await $.settings.read();
   const settingsEnv = settings['env'];
-  const lookup = async (name: string): Promise<string | undefined> => {
-    const fromEnv = await $.env.get(name);
+  // The engine refuses `$.env.get` unless the name is a string literal at the
+  // call site, so each variable is read by name and only the settings fallback
+  // is shared.
+  const orSettings = (fromEnv: string | undefined, name: string): string | undefined => {
     if (fromEnv) return fromEnv;
     if (settingsEnv && typeof settingsEnv === 'object') {
       const value = (settingsEnv as Record<string, unknown>)[name];
@@ -263,9 +265,9 @@ export async function getJevAccess(
     }
     return undefined;
   };
-  const typesafe = await lookup('TYPESAFE_API_KEY');
+  const typesafe = orSettings(await $.env.get('TYPESAFE_API_KEY'), 'TYPESAFE_API_KEY');
   if (typesafe) return { apiKey: typesafe };
-  const openrouter = await lookup('OPENROUTER_API_KEY');
+  const openrouter = orSettings(await $.env.get('OPENROUTER_API_KEY'), 'OPENROUTER_API_KEY');
   if (openrouter) {
     return {
       apiKey: openrouter,
